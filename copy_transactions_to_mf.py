@@ -72,15 +72,19 @@ def post_money_forward_transactinos(driver: webdriver.Chrome, transactions: list
             driver.find_element(By.ID, "updated-at").send_keys(transaction["updated_at"])
             driver.find_element(By.ID, "appendedPrependedInput").send_keys(transaction["amount"])
 
-            accountSelect = driver.find_element(By.ID, "user_asset_act_sub_account_id_hash")  # 「支出元」セレクトボックス
-            accountOptions = accountSelect.find_elements(By.TAG_NAME, "option")  # 「支出元」の選択肢をすべて取得
-            accountText = ""  # セレクトボックスの選択肢。「ｘｘペイ」ではなく「ｘｘペイ(10,000円)」と残高が書かれているので、該当する選択肢を探す
-            for option in accountOptions:
-                if option.text.startswith(account):  # 選択肢(e.g. "ｘｘペイ(10,000円)")が、引数の支出元(e.g. "ｘｘペイ")と前方一致
-                    accountText = option.text
-            if accountText == "":  # 一致する選択肢がない場合はエラーを吐いて終了
-                raise ValueError("Account '" + account + "' is not found!")
-            Select(accountSelect).select_by_visible_text(accountText)  # 「支出元」を選択
+            # 「支出元」セレクトボックスの選択肢をすべて取得
+            account_select = driver.find_element(By.ID, "user_asset_act_sub_account_id_hash")
+            account_options = account_select.find_elements(By.TAG_NAME, "option")
+            # account_text: セレクトボックスの選択肢。「ｘｘペイ」ではなく「ｘｘペイ(10,000円)」と残高が書かれているので、該当する選択肢を探す
+            account_text = ""
+            for option in account_options:
+                # 選択肢(e.g. "ｘｘペイ(10,000円)")が、引数の支出元(e.g. "ｘｘペイ")と前方一致
+                if option.text.startswith(account):
+                    account_text = option.text
+            if account_text == "":
+                # 一致する選択肢がない場合: エラーを吐いて終了
+                raise ValueError(f"Account '{account}' is not found!")
+            Select(account_select).select_by_visible_text(account_text)  # 「支出元」を選択
 
             driver.find_element(By.ID, "js-content-field").send_keys(transaction["content"])  # 「内容」を入力
             driver.find_element(By.ID, "submit-button").click()  # 「保存する」をクリック
@@ -90,13 +94,13 @@ def post_money_forward_transactinos(driver: webdriver.Chrome, transactions: list
         driver.get(MoneyForwardURL.SIGN_OUT)
 
 
-def get_rakuten_cash_transactions(driver: webdriver.Chrome, targetDate: datetime.date) -> list[dict]:
+def get_rakuten_cash_transactions(driver: webdriver.Chrome, target_date: datetime.date) -> list[dict]:
     """
     楽天ポイントクラブウェブサイトにログインし、楽天キャッシュの利用履歴を取得する
 
     Parameters
     ----------
-    targetDate: datetime.date
+    target_date: datetime.date
         データを取得する日付
 
     Returns
@@ -120,63 +124,65 @@ def get_rakuten_cash_transactions(driver: webdriver.Chrome, targetDate: datetime
     table = driver.find_element(By.XPATH, "/html/body/div[2]/div/div[2]/div/div/div/table")
     trs = table.find_elements(By.TAG_NAME, "tr")  # ポイント履歴の表の各行を配列として取得
 
-    transactions: list[dict] = []  # ここに楽天キャッシュの入出金履歴をappendしていく
+    # transactions: 楽天キャッシュの入出金履歴をappendしていく
+    transactions: list[dict] = []
     for tr in trs:  # 各行について繰り返す
-        if tr.get_attribute("class") == "get" or tr.get_attribute("class") == "use":
-            tds = tr.find_elements(By.TAG_NAME, "td")
-            year = tds[0].text[:4]
-            month = tds[0].text[5:7]
-            day = tds[0].text[8:10]
-            rowDate = datetime.date(int(year), int(month), int(day))  # いま見ている行の日付
+        if tr.get_attribute("class") not in ("get", "use"):
+            continue  # 対象の行ではない
 
-            if rowDate > targetDate:  # 対象日より新しいデータは無視する
+        tds = tr.find_elements(By.TAG_NAME, "td")
+        # row_date: いま見ている行の日付
+        row_date_str = tds[0].text[:10].replace("-", "/")
+        row_date_dt = datetime.datetime.strptime(row_date_str, "%Y/%m/%d")
+
+        if row_date_dt > target_date:
+            # 対象日より新しいデータは無視する
+            pass
+        if row_date_dt < target_date:
+            # 対象日以前のデータに達したら、収集を終了する
+            break
+
+        # 対象日のデータに対して処理を行う
+        # 既定値
+        _is_income = False  # Trueの場合は収入扱い
+        _content = tds[2].text[: len(tds[2].text) - 13]  # 内容: 末尾についている"[2022/01/01]"という13文字を消す
+        try:
+            _amount = int(tds[4].text.replace(",", ""))  # 金額: 桁区切りコンマを削除する
+        except Exception:
+            _amount = 0  # データが含まれていない場合
+        if tds[3].text == "チャージ\nキャッシュ":
+            # 「チャージ（キャッシュ）」
+            _is_income = True
+        if tds[3].text == "利用":
+            # 「利用」(街のお店でキャッシュを利用した場合)
+            if len(tds[5].find_elements(By.CLASS_NAME, "note-icon")) > 0:
+                # "note-icon"クラスが存在する場合、「内訳（キャッシュ優先利用）」などで楽天キャッシュの利用額が書かれている
+                # 楽天キャッシュの支払額を取得
+                note_cash = tds[5].find_element(By.CLASS_NAME, "note-cash").text
+                _amount = int(note_cash.replace(",", "").replace("円", ""))  # 金額。桁区切りコンマと単位を削除する
+                # 明細の余分な文字列を除去
+                _content = _content.replace("楽天ペイでポイントを利用", "")
+                _content = _content.replace("で楽天ペイを利用しての購入によるポイント利用", "")
+                _content = _content.replace("でポイント利用", "")
+            elif tds[2].text[:13] == "投信積立（楽天キャッシュ）":
+                # "note-icon"クラスがなくても、投信積立（楽天キャッシュ）を利用している場合は取引がある
                 pass
+            else:
+                # このときは追加しない？
+                continue
 
-            elif rowDate == targetDate:  # 対象日のデータに対して処理を行う
-                # 「チャージ（キャッシュ）」
-                if tds[3].text == "チャージ\nキャッシュ":
-                    transactions.append(
-                        {
-                            "is_income": True,
-                            "amount": int(tds[4].text.replace(",", "")),  # 金額。桁区切りコンマを削除する
-                            "updated_at": targetDate.strftime("%Y/%m/%d"),  # 日付。対象日をyyyy/mm/dd形式にする
-                            "content": tds[2].text[: len(tds[2].text) - 13],  # 内容。末尾についている"[2022/01/01]"という13文字を消す
-                        }
-                    )
+        # 決済情報を追加する
+        transactions.append(
+            {
+                "is_income": _is_income,
+                "amount": _amount,
+                "updated_at": row_date_str,
+                "content": _content,
+            }
+        )
 
-                # 「利用」(街のお店でキャッシュを利用した場合)
-                elif tds[3].text == "利用":
-                    # "note-icon"クラスが存在する場合、「内訳（キャッシュ優先利用）」などで楽天キャッシュの利用額が書かれている
-                    if len(tds[5].find_elements(By.CLASS_NAME, "note-icon")) > 0:
-                        noteCash = tds[5].find_element(By.CLASS_NAME, "note-cash").text  # 楽天キャッシュの支払額を取得
-                        content = tds[2].text[: len(tds[2].text) - 13]  # 内容。末尾についている日付と注釈を消す
-                        content = content.replace("楽天ペイでポイントを利用", "")
-                        content = content.replace("で楽天ペイを利用しての購入によるポイント利用", "")
-                        content = content.replace("でポイント利用", "")
-                        transactions.append(
-                            {
-                                "is_income": False,
-                                "amount": int(noteCash.replace(",", "").replace("円", "")),  # 金額。桁区切りコンマと円を削除する
-                                "updated_at": targetDate.strftime("%Y/%m/%d"),  # 日付。対象日をyyyy/mm/dd形式にする
-                                "content": content,
-                            }
-                        )
-
-                    # "note-icon"クラスがなくても、投信積立（楽天キャッシュ）を利用している場合は取引がある
-                    elif tds[2].text[:13] == "投信積立（楽天キャッシュ）":
-                        transactions.append(
-                            {
-                                "is_income": False,
-                                "amount": int(tds[4].text.replace(",", "")),  # 金額。桁区切りコンマを削除する
-                                "updated_at": targetDate.strftime("%Y/%m/%d"),  # 日付。対象日をyyyy/mm/dd形式にする
-                                "content": tds[2].text[: len(tds[2].text) - 13],  # 内容。末尾についている"[2022/01/01]"という13文字を消す
-                            }
-                        )
-
-            else:  # 対象日以前のデータに達したら、収集を終了する
-                break
-
-    driver.get(RakutenCashURL.LOGOUT_PAGE)  # ログアウト
+    # ログアウト
+    driver.get(RakutenCashURL.LOGOUT_PAGE)
 
     transactions.reverse()  # 新しい順に並んでいるので、古い順に並び替える
     return transactions
