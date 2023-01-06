@@ -8,7 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 
 
-def post_money_forward_transactinos(transactions: list[dict], account: str) -> None:
+def post_money_forward_transactinos(driver: webdriver.Chrome, transactions: list[dict], account: str) -> None:
     """
     マネーフォワード家計簿にログインし、入出金履歴を登録する
 
@@ -28,14 +28,6 @@ def post_money_forward_transactinos(transactions: list[dict], account: str) -> N
     """
 
     if transactions != []:
-
-        # envファイルの読み込み
-        dotenv.load_dotenv()
-        CHROMEDRIVER_PATH = os.environ["CHROMEDRIVER_PATH"]
-
-        # seleniumの起動
-        chrome_service = service.Service(executable_path=CHROMEDRIVER_PATH)
-        driver = webdriver.Chrome(service=chrome_service)
         driver.implicitly_wait(10)
         driver.set_page_load_timeout(10)
 
@@ -84,7 +76,7 @@ def post_money_forward_transactinos(transactions: list[dict], account: str) -> N
         driver.get("https://moneyforward.com/sign_out")
 
 
-def get_rakuten_cash_transactions(targetDate: datetime.date) -> list[dict]:
+def get_rakuten_cash_transactions(driver: webdriver.Chrome, targetDate: datetime.date) -> list[dict]:
     """
     楽天ポイントクラブウェブサイトにログインし、楽天キャッシュの利用履歴を取得する
 
@@ -99,27 +91,6 @@ def get_rakuten_cash_transactions(targetDate: datetime.date) -> list[dict]:
         取引履歴を表す key-value object を0個以上含んだリスト。
         詳細は post_money_forward_transaction 関数を参照
     """
-
-    # envファイルの読み込み
-    dotenv.load_dotenv()
-    CHROMEDRIVER_PATH = os.environ["CHROMEDRIVER_PATH"]
-
-    # オプションは今回は使わない
-    # options = webdriver.ChromeOptions()
-    # options.add_experimental_option(
-    #     "prefs",
-    #     {
-    #         "download.default_directory": DOWNLOAD_DIR,  # ダウンロード先のフォルダ
-    #         "download.directory_upgrade": True,  # ダウンロード先のフォルダを指定したものに更新する
-    #         "download.prompt_for_download": False,  # ダウンロード時に「名前を付けて保存」ダイアログを表示しない
-    #         "plugins.always_open_pdf_externally": True,  # PDFをブラウザのビューワーで開かせない
-    #     },
-    # )
-
-    # seleniumの起動
-    chrome_service = service.Service(executable_path=CHROMEDRIVER_PATH)
-    driver = webdriver.Chrome(service=chrome_service)
-    # driver = webdriver.Chrome(service=chrome_service, options=options)
     driver.implicitly_wait(10)
     driver.set_page_load_timeout(10)
     driver.get("https://point.rakuten.co.jp/history/")
@@ -197,8 +168,22 @@ def get_rakuten_cash_transactions(targetDate: datetime.date) -> list[dict]:
     return transactions
 
 
+def main():
+    # 実行対象は昨日
+    yesterday = datetime.date.today() - datetime.timedelta(days=1)
+    # envファイルの読み込み
+    dotenv.load_dotenv()
+    # seleniumの起動
+    chrome_service = service.Service(executable_path=os.environ["CHROMEDRIVER_PATH"])
+    # 必ずプロセスを終了するようにしておく
+    with webdriver.Chrome(service=chrome_service) as driver:
+        # 昨日の楽天キャッシュ取引履歴を取得
+        transactions = get_rakuten_cash_transactions(driver, yesterday)
+        print(transactions)
+        # マネーフォワードに反映
+        post_money_forward_transactinos(driver, transactions, "楽天キャッシュ")
+
+
 if __name__ == "__main__":
-    yesterday = datetime.date.today() - datetime.timedelta(days=1)  # 昨日の日付を求める
-    transactions = get_rakuten_cash_transactions(yesterday)  # 昨日の楽天キャッシュ取引履歴を取得
-    print(transactions)
-    post_money_forward_transactinos(transactions, "楽天キャッシュ")  # マネーフォワードに反映
+    # NOTE: 複数の金融機関に対応する場合は、ここで argparse を使って main に引数を渡すと良い
+    main()
