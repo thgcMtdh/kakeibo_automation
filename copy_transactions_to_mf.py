@@ -8,6 +8,21 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 
 
+class MoneyForwardURL:
+    """MoneyForward のURL"""
+
+    TOP_PAGE = "https://moneyforward.com/"
+    SIGN_IN = TOP_PAGE + "sign_in"
+    SIGN_OUT = TOP_PAGE + "sign_out"
+    CF_PAGE = TOP_PAGE + "cf"
+
+
+class RakutenCashURL:
+    TOP_PAGE = "https://point.rakuten.co.jp/"
+    HISTORY = TOP_PAGE + "history/"
+    LOGOUT_PAGE = "https://member.id.rakuten.co.jp/r/logout.html"
+
+
 def post_money_forward_transactinos(driver: webdriver.Chrome, transactions: list[dict], account: str) -> None:
     """
     マネーフォワード家計簿にログインし、入出金履歴を登録する
@@ -32,8 +47,7 @@ def post_money_forward_transactinos(driver: webdriver.Chrome, transactions: list
         driver.set_page_load_timeout(10)
 
         # ログイン
-        driver.get("https://moneyforward.com/")
-        driver.get("https://moneyforward.com/sign_in")
+        driver.get(MoneyForwardURL.SIGN_IN)
         ID = os.environ["MONEYFORWARD_ID"]
         PWD = os.environ["MONEYFORWARD_PASS"]
         driver.find_element(By.XPATH, "/html/body/main/div/div/div/div/div[1]/section/div/div/div[2]/div/a[1]").click()
@@ -43,7 +57,7 @@ def post_money_forward_transactinos(driver: webdriver.Chrome, transactions: list
         driver.find_element(By.CLASS_NAME, "submitBtn").click()
 
         # データ入力
-        driver.get("https://moneyforward.com/cf")
+        driver.get(MoneyForwardURL.CF_PAGE)
         for transaction in transactions:
             driver.find_element(
                 By.XPATH, "/html/body/div[1]/div[2]/div/div/div/section/section/div[1]/div[1]/div/button"
@@ -73,7 +87,7 @@ def post_money_forward_transactinos(driver: webdriver.Chrome, transactions: list
             driver.find_element(By.ID, "cancel-button").click()  # 保存が終了したら「閉じる」をクリック
 
         # ログアウト
-        driver.get("https://moneyforward.com/sign_out")
+        driver.get(MoneyForwardURL.SIGN_OUT)
 
 
 def get_rakuten_cash_transactions(driver: webdriver.Chrome, targetDate: datetime.date) -> list[dict]:
@@ -93,7 +107,7 @@ def get_rakuten_cash_transactions(driver: webdriver.Chrome, targetDate: datetime
     """
     driver.implicitly_wait(10)
     driver.set_page_load_timeout(10)
-    driver.get("https://point.rakuten.co.jp/history/")
+    driver.get(RakutenCashURL.HISTORY)
 
     # ログイン
     ID = os.environ["RAKUTEN_ID"]
@@ -162,7 +176,7 @@ def get_rakuten_cash_transactions(driver: webdriver.Chrome, targetDate: datetime
             else:  # 対象日以前のデータに達したら、収集を終了する
                 break
 
-    driver.get("https://member.id.rakuten.co.jp/r/logout.html")  # ログアウト
+    driver.get(RakutenCashURL.LOGOUT_PAGE)  # ログアウト
 
     transactions.reverse()  # 新しい順に並んでいるので、古い順に並び替える
     return transactions
