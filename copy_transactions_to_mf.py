@@ -3,9 +3,9 @@ import os
 
 import dotenv
 from selenium import webdriver
-from selenium.webdriver.chrome import service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
+from webdriver_manager.chrome import ChromeDriverManager
 
 
 class MoneyForwardURL:
@@ -187,10 +187,8 @@ def main():
     yesterday = datetime.date.today() - datetime.timedelta(days=1)
     # envファイルの読み込み
     dotenv.load_dotenv()
-    # seleniumの起動
-    chrome_service = service.Service(executable_path=os.environ["CHROMEDRIVER_PATH"])
     # 必ずプロセスを終了するようにしておく
-    with webdriver.Chrome(service=chrome_service) as driver:
+    with webdriver.Chrome(ChromeDriverManager().install()) as driver:
         # 昨日の楽天キャッシュ取引履歴を取得
         transactions = get_rakuten_cash_transactions(driver, yesterday)
         print(transactions)
