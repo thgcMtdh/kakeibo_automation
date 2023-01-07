@@ -132,7 +132,13 @@ def get_rakuten_cash_transactions(driver: webdriver.Chrome, target_date: datetim
 
         tds = tr.find_elements(By.TAG_NAME, "td")
         # row_date: いま見ている行の日付
-        row_date_str = tds[0].text[:10].replace("-", "/")
+        row_date_str = "/".join(
+            [
+                tds[0].text[:4],  # year
+                tds[0].text[5:7],  # month
+                tds[0].text[8:10],  # day
+            ]
+        )
         row_date_dt = datetime.datetime.strptime(row_date_str, "%Y/%m/%d")
 
         if row_date_dt > target_date:
@@ -168,7 +174,7 @@ def get_rakuten_cash_transactions(driver: webdriver.Chrome, target_date: datetim
                 # "note-icon"クラスがなくても、投信積立（楽天キャッシュ）を利用している場合は取引がある
                 pass
             else:
-                # このときは追加しない？
+                # いずれも当てはまらない取引は追加しない
                 continue
 
         # 決済情報を追加する
