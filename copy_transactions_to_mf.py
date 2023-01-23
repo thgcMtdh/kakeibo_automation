@@ -140,11 +140,12 @@ def get_rakuten_cash_transactions(driver: webdriver.Chrome, target_date: datetim
             ]
         )
         row_date_dt = datetime.datetime.strptime(row_date_str, "%Y/%m/%d")
+        row_date = datetime.date(row_date_dt.year, row_date_dt.month, row_date_dt.day)
 
-        if row_date_dt > target_date:
+        if row_date > target_date:
             # 対象日より新しいデータは無視する
             pass
-        if row_date_dt < target_date:
+        if row_date < target_date:
             # 対象日以前のデータに達したら、収集を終了する
             break
 
