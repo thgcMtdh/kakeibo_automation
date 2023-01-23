@@ -145,50 +145,68 @@ def get_rakuten_cash_transactions(driver: webdriver.Chrome, target_date: datetim
         if row_date > target_date:
             # 対象日より新しいデータは無視する
             pass
-        if row_date < target_date:
+
+        elif row_date == target_date:
+            # 対象日のデータに対して処理を行う
+            # 既定値
+            # tr_is_income: Trueの場合は収入扱い
+            tr_is_income = False
+            # tr_content: 末尾についている"[2022/01/01]"という13文字を消す
+            tr_content = tds[2].text[: len(tds[2].text) - 13]
+            try:
+                tr_amount = int(tds[4].text.replace(",", ""))  # 金額: 桁区切りコンマを削除する
+            except Exception:
+                tr_amount = 0  # データが含まれていない場合
+
+            if tds[3].text == "チャージ\nキャッシュ":
+                # 「チャージ（キャッシュ）」
+                # tr_is_income = True
+                # transactions.append(
+                #     {
+                #         "is_income": tr_is_income,
+                #         "amount": tr_amount,
+                #         "updated_at": row_date_str,
+                #         "content": tr_content,
+                #     }
+                # )
+                continue  # チャージはクレカの履歴から追えるので、ここでは取得しないこととした
+
+            if tds[3].text == "利用":
+                # 「利用」(街のお店でキャッシュを利用した場合)
+                if len(tds[5].find_elements(By.CLASS_NAME, "note-icon")) > 0:
+                    # "note-icon"クラスが存在する場合、「内訳（キャッシュ優先利用）」などで楽天キャッシュの利用額が書かれている
+                    # 楽天キャッシュの支払額を取得
+                    note_cash = tds[5].find_element(By.CLASS_NAME, "note-cash").text
+                    tr_amount = int(note_cash.replace(",", "").replace("円", ""))  # 金額。桁区切りコンマと単位を削除する
+                    # 明細の余分な文字列を除去
+                    tr_content = tr_content.replace("楽天ペイでポイントを利用", "")
+                    tr_content = tr_content.replace("で楽天ペイを利用しての購入によるポイント利用", "")
+                    tr_content = tr_content.replace("でポイント利用", "")
+                    transactions.append(
+                        {
+                            "is_income": tr_is_income,
+                            "amount": tr_amount,
+                            "updated_at": row_date_str,
+                            "content": tr_content,
+                        }
+                    )
+                elif tds[2].text[:13] == "投信積立（楽天キャッシュ）":
+                    # "note-icon"クラスがなくても、投信積立（楽天キャッシュ）を利用している場合は取引がある
+                    transactions.append(
+                        {
+                            "is_income": tr_is_income,
+                            "amount": tr_amount,
+                            "updated_at": row_date_str,
+                            "content": tr_content,
+                        }
+                    )
+                else:
+                    # いずれも当てはまらない取引は追加しない
+                    continue
+
+        elif row_date < target_date:
             # 対象日以前のデータに達したら、収集を終了する
             break
-
-        # 対象日のデータに対して処理を行う
-        # 既定値
-        # tr_is_income: Trueの場合は収入扱い
-        tr_is_income = False
-        # tr_content: 末尾についている"[2022/01/01]"という13文字を消す
-        tr_content = tds[2].text[: len(tds[2].text) - 13]
-        try:
-            tr_amount = int(tds[4].text.replace(",", ""))  # 金額: 桁区切りコンマを削除する
-        except Exception:
-            tr_amount = 0  # データが含まれていない場合
-        if tds[3].text == "チャージ\nキャッシュ":
-            # 「チャージ（キャッシュ）」
-            tr_is_income = True
-        if tds[3].text == "利用":
-            # 「利用」(街のお店でキャッシュを利用した場合)
-            if len(tds[5].find_elements(By.CLASS_NAME, "note-icon")) > 0:
-                # "note-icon"クラスが存在する場合、「内訳（キャッシュ優先利用）」などで楽天キャッシュの利用額が書かれている
-                # 楽天キャッシュの支払額を取得
-                note_cash = tds[5].find_element(By.CLASS_NAME, "note-cash").text
-                tr_amount = int(note_cash.replace(",", "").replace("円", ""))  # 金額。桁区切りコンマと単位を削除する
-                # 明細の余分な文字列を除去
-                tr_content = tr_content.replace("楽天ペイでポイントを利用", "")
-                tr_content = tr_content.replace("で楽天ペイを利用しての購入によるポイント利用", "")
-                tr_content = tr_content.replace("でポイント利用", "")
-            elif tds[2].text[:13] == "投信積立（楽天キャッシュ）":
-                # "note-icon"クラスがなくても、投信積立（楽天キャッシュ）を利用している場合は取引がある
-                pass
-            else:
-                # いずれも当てはまらない取引は追加しない
-                continue
-
-        # 決済情報を追加する
-        transactions.append(
-            {
-                "is_income": tr_is_income,
-                "amount": tr_amount,
-                "updated_at": row_date_str,
-                "content": tr_content,
-            }
-        )
 
     # ログアウト
     driver.get(RakutenCashURL.LOGOUT_PAGE)
