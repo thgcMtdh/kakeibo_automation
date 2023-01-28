@@ -8,13 +8,11 @@
 
 Ver 3.11 の Python 環境と Google Chrome を前提にしています。
 
-### chromedriver のインストール
+### (ラズパイのみ) chromedriver のインストール
 
-スクレイピングに必要。
-
-- Chrome のバージョンを調べる。右上のメニューからヘルプ>Google Chrome について
-- https://chromedriver.storage.googleapis.com/index.html より、該当するバージョンをダウンロード
-- zip ファイルを適当な場所に展開。展開した中に入っている「chromedriver.exe」のパスをメモしておく
+```
+$ sudo apt install chromium-chromedriver
+```
 
 ### リポジトリの clone
 
@@ -32,7 +30,6 @@ $ touch .env
 以下の内容を記入する
 
 ```env
-CHROMEDRIVER_PATH=""  # chromedriver.exeへのフルパス
 RAKUTEN_ID=""  # 楽天会員ID
 RAKUTEN_PASS=""  # 楽天会員パスワード
 MONEYFORWARD_ID=""  # マネーフォワード家計簿ID
