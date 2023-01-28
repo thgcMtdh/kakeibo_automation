@@ -1,8 +1,11 @@
 import datetime
 import os
+import platform
 
 import dotenv
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 from webdriver_manager.chrome import ChromeDriverManager
@@ -220,8 +223,16 @@ def main():
     yesterday = datetime.date.today() - datetime.timedelta(days=1)
     # envファイルの読み込み
     dotenv.load_dotenv()
+    # ラズパイ(linux32)判定
+    options = Options()
+    if platform.system() == "Linux" and platform.machine() == "armv7l":  # if raspi
+        options.binary_location = "/usr/bin/chromium-browser"
+        service = Service("/usr/bin/chromedriver")
+    else:  # if not raspi and considering you're using Chrome
+        service = Service(ChromeDriverManager().install())
+
     # 必ずプロセスを終了するようにしておく
-    with webdriver.Chrome(ChromeDriverManager().install()) as driver:
+    with webdriver.Chrome(service=service, options=options) as driver:
         # 昨日の楽天キャッシュ取引履歴を取得
         transactions = get_rakuten_cash_transactions(driver, yesterday)
         print(transactions)
