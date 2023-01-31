@@ -226,6 +226,8 @@ def main():
     # ラズパイ(linux32)判定
     options = Options()
     if platform.system() == "Linux" and platform.machine() == "armv7l":  # if raspi
+        options.add_argument("--headless")
+        options.add_argument("--no-sandbox")
         options.binary_location = "/usr/bin/chromium-browser"
         service = Service("/usr/bin/chromedriver")
     else:  # if not raspi and considering you're using Chrome
