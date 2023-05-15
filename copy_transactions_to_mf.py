@@ -1,6 +1,7 @@
 import datetime
 import os
 import platform
+import time
 
 import dotenv
 from selenium import webdriver
@@ -46,8 +47,8 @@ def post_money_forward_transactinos(driver: webdriver.Chrome, transactions: list
     """
 
     if transactions != []:
-        driver.implicitly_wait(10)
-        driver.set_page_load_timeout(10)
+        driver.implicitly_wait(30)
+        driver.set_page_load_timeout(30)
 
         # ログイン
         driver.get(MoneyForwardURL.SIGN_IN)
@@ -112,18 +113,21 @@ def get_rakuten_cash_transactions(driver: webdriver.Chrome, target_date: datetim
         取引履歴を表す key-value object を0個以上含んだリスト。
         詳細は post_money_forward_transaction 関数を参照
     """
-    driver.implicitly_wait(10)
-    driver.set_page_load_timeout(10)
+    driver.implicitly_wait(60)
+    driver.set_page_load_timeout(60)
     driver.get(RakutenCashURL.HISTORY)
 
     # ログイン
     ID = os.environ["RAKUTEN_ID"]
     PWD = os.environ["RAKUTEN_PASS"]
+    # driver.get_screenshot_as_file("ss1.png")  # get screenshot for debug
     driver.find_element(By.ID, "loginInner_u").send_keys(ID)
     driver.find_element(By.ID, "loginInner_p").send_keys(PWD)
+    time.sleep(5)
     driver.find_element(By.NAME, "submit").click()
 
     # 入出金明細の取得
+    time.sleep(5)
     table = driver.find_element(By.XPATH, "/html/body/div[2]/div/div[2]/div/div/div/table")
     trs = table.find_elements(By.TAG_NAME, "tr")  # ポイント履歴の表の各行を配列として取得
 
@@ -226,8 +230,14 @@ def main():
     # ラズパイ(linux32)判定
     options = Options()
     if platform.system() == "Linux" and platform.machine() == "armv7l":  # if raspi
+        # headless mode on raspi
         options.add_argument("--headless")
         options.add_argument("--no-sandbox")
+        options.add_argument("--window-size=1280,720")
+        user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.98 Safari/537.36"
+        options.add_argument(f"user-agent={user_agent}")
+        #options.add_argument("--ignore-certificate-erorrs")
+        #options.add_argument("--allow-runnig-insecure-content")
         options.binary_location = "/usr/bin/chromium-browser"
         service = Service("/usr/bin/chromedriver")
     else:  # if not raspi and considering you're using Chrome
