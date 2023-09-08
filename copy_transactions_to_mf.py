@@ -234,10 +234,12 @@ def main():
         options.add_argument("--headless")
         options.add_argument("--no-sandbox")
         options.add_argument("--window-size=1280,720")
-        user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.98 Safari/537.36"
+        user_agent = (
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.98 Safari/537.36"
+        )
         options.add_argument(f"user-agent={user_agent}")
-        #options.add_argument("--ignore-certificate-erorrs")
-        #options.add_argument("--allow-runnig-insecure-content")
+        # options.add_argument("--ignore-certificate-erorrs")
+        # options.add_argument("--allow-runnig-insecure-content")
         options.binary_location = "/usr/bin/chromium-browser"
         service = Service("/usr/bin/chromedriver")
     else:  # if not raspi and considering you're using Chrome
