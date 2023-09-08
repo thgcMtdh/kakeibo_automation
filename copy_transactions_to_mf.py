@@ -54,11 +54,11 @@ def post_money_forward_transactinos(driver: webdriver.Chrome, transactions: list
         driver.get(MoneyForwardURL.SIGN_IN)
         ID = os.environ["MONEYFORWARD_ID"]
         PWD = os.environ["MONEYFORWARD_PASS"]
-        driver.find_element(By.XPATH, "/html/body/main/div/div/div/div/div[1]/section/div/div/div[2]/div/a[1]").click()
+        driver.find_element(By.ID, "email").click()
         driver.find_element(By.NAME, "mfid_user[email]").send_keys(ID)
-        driver.find_element(By.CLASS_NAME, "submitBtn").click()
+        driver.find_element(By.ID, "submitto").click()
         driver.find_element(By.NAME, "mfid_user[password]").send_keys(PWD)
-        driver.find_element(By.CLASS_NAME, "submitBtn").click()
+        driver.find_element(By.ID, "submitto").click()
 
         # データ入力
         driver.get(MoneyForwardURL.CF_PAGE)
