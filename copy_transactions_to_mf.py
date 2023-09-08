@@ -58,7 +58,7 @@ def post_money_forward_transactinos(driver: webdriver.Chrome, transactions: list
         driver.find_element(By.ID, "submitto").click()
         driver.find_element(By.NAME, "mfid_user[password]").send_keys(PWD)
         driver.find_element(By.ID, "submitto").click()
-        driver.find_element(By.CLASS_NAME, "_2fpHYfrI").click()  # 整体認証のスキップ
+        # driver.find_element(By.CLASS_NAME, "_2fpHYfrI").click()  # 整体認証のスキップ
 
         # データ入力
         driver.get(MoneyForwardURL.CF_PAGE)
