@@ -229,7 +229,7 @@ def main():
     dotenv.load_dotenv()
     # ラズパイ(linux32)判定
     options = Options()
-    if platform.system() == "Linux" and platform.machine() == "armv7l":  # if raspi
+    if platform.system() == "Linux" and platform.machine() == "aarch64":  # if raspi
         # headless mode on raspi
         options.add_argument("--headless")
         options.add_argument("--no-sandbox")
