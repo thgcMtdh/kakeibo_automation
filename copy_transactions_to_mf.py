@@ -121,13 +121,13 @@ def get_rakuten_cash_transactions(driver: webdriver.Chrome, target_date: datetim
     ID = os.environ["RAKUTEN_ID"]
     PWD = os.environ["RAKUTEN_PASS"]
     # driver.get_screenshot_as_file("ss1.png")  # get screenshot for debug
+    time.sleep(5)
     driver.find_element(By.ID, "loginInner_u").send_keys(ID)
     driver.find_element(By.ID, "loginInner_p").send_keys(PWD)
-    time.sleep(5)
     driver.find_element(By.NAME, "submit").click()
 
     # 入出金明細の取得
-    time.sleep(5)
+    time.sleep(10)
     table = driver.find_element(By.XPATH, "/html/body/div[2]/div/div[2]/div/div/div/table")
     trs = table.find_elements(By.TAG_NAME, "tr")  # ポイント履歴の表の各行を配列として取得
 
